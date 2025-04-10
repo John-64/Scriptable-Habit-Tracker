@@ -1,28 +1,21 @@
-// Scriptable Habit Tracker - John64
+// Scriptable Habit Tracker - John64 (modificato)
 
 // ========================
 // =- USER CONFIGURATION -=
 // ========================
 
-// Set the name of the habit you want to track
 const HABIT_NAME = "Read";
-
-// Set the start date and the end date of the habit tracking (year, month, day)
 const START_DATE = new Date(2025, 0, 1);
 const END_DATE = new Date(2025, 11, 31);
 
-// WIDGET STYLE
-// Set the background color and opacity
 const BG_COLOR = "#000617";
 const BG_OVERLAY_OPACITY = 0.5;
 
-// Set the colors of the circles
 const COLOR_TODAY = new Color("#ffffff");
 const COLOR_FILLED = new Color("#ffb135");
 const COLOR_MISSED = new Color("#002738");
 const COLOR_UNFILLED = new Color("#ffffff", 0.2);
 
-// WIDGET LAYOUT
 const PADDING = 3;
 const CIRCLE_SIZE = 6;
 const CIRCLE_SPACING = 3;
@@ -43,9 +36,12 @@ if (!FM.fileExists(HABITS_DIR)) {
 }
 const FILE_PATH = FM.joinPath(HABITS_DIR, FILE_NAME);
 
+function formatDate(date) {
+  return date.toLocaleDateString();
+}
+
 function getTodayKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  return formatDate(new Date());
 }
 
 function loadHabitData() {
@@ -53,49 +49,46 @@ function loadHabitData() {
     const raw = FM.readString(FILE_PATH);
     return JSON.parse(raw);
   } else {
-    return [];
+    return {};
   }
 }
 
 function saveHabitData(data) {
-  FM.writeString(FILE_PATH, JSON.stringify(data));
+  FM.writeString(FILE_PATH, JSON.stringify(data, null, 2));
 }
 
 if (!config.runsInWidget) {
-    const data = loadHabitData();
-    const today = getTodayKey();
-    const alreadyLogged = data.includes(today);
-  
-    if (alreadyLogged) {
-      const alert = new Alert();
-      alert.title = "Already registered";
-      alert.message = "Do you want to remove today’s progress?";
-      alert.addAction("Cancel");
-      alert.addDestructiveAction("Remove");
-  
-      const response = await alert.present();
-  
-      if (response === 1) {
-        const index = data.indexOf(today);
-        if (index !== -1) {
-          data.splice(index, 1);
-          saveHabitData(data);
-  
-          let notify = new Notification();
-          notify.title = "Habit removed";
-          notify.body = "Today’s entry has been deleted.";
-          notify.sound = "default";
-          await notify.schedule();
-        }
-      }
-    } else {
-      data.push(today);
+  const data = loadHabitData();
+  const today = getTodayKey();
+  const alreadyLogged = data[today] === true;
+
+  if (alreadyLogged) {
+    const alert = new Alert();
+    alert.title = "Already registered";
+    alert.message = "Do you want to remove today’s progress?";
+    alert.addAction("Cancel");
+    alert.addDestructiveAction("Remove");
+
+    const response = await alert.present();
+
+    if (response === 1) {
+      data[today] = false;
       saveHabitData(data);
+
+      let notify = new Notification();
+      notify.title = "Habit removed";
+      notify.body = "Today’s entry has been marked as not done.";
+      notify.sound = "default";
+      await notify.schedule();
     }
-  
-    Script.complete();
-    return;
-}  
+  } else {
+    data[today] = true;
+    saveHabitData(data);
+  }
+
+  Script.complete();
+  return;
+}
 
 const NOW = new Date();
 const MS_PER_DAY = 86400000;
@@ -103,7 +96,6 @@ const MS_PER_DAY = 86400000;
 const DAYS_TOTAL = Math.round((END_DATE - START_DATE) / MS_PER_DAY) + 1;
 const DAYS_UNTIL_END = Math.max(0, Math.round((END_DATE - NOW) / MS_PER_DAY));
 const habitData = loadHabitData();
-const habitDates = new Set(habitData);
 
 const widget = new ListWidget();
 const overlay = new LinearGradient();
@@ -133,40 +125,36 @@ gridStack.layoutVertically();
 gridStack.spacing = CIRCLE_SPACING;
 
 for (let row = 0; row < ROWS; row++) {
-    const rowStack = gridStack.addStack();
-    rowStack.layoutHorizontally();
-    rowStack.addSpacer(DOT_SHIFT_LEFT);
-  
-    for (let col = 0; col < COLUMNS; col++) {
-      const dayIndex = row * COLUMNS + col;
-      if (dayIndex >= DAYS_TOTAL) continue;
-  
-      const dayDate = new Date(START_DATE.getTime() + dayIndex * MS_PER_DAY);
-      const key = `${dayDate.getFullYear()}-${dayDate.getMonth() + 1}-${dayDate.getDate()}`;
-      const filled = habitDates.has(key);
-  
-      const circle = rowStack.addText("●");
-      circle.font = Font.systemFont(CIRCLE_SIZE);
+  const rowStack = gridStack.addStack();
+  rowStack.layoutHorizontally();
+  rowStack.addSpacer(DOT_SHIFT_LEFT);
+
+  for (let col = 0; col < COLUMNS; col++) {
+    const dayIndex = row * COLUMNS + col;
+    if (dayIndex >= DAYS_TOTAL) continue;
+
+    const dayDate = new Date(START_DATE.getTime() + dayIndex * MS_PER_DAY);
+    const key = formatDate(dayDate);
+    const filled = habitData[key] === true;
+
+    const circle = rowStack.addText("●");
+    circle.font = Font.systemFont(CIRCLE_SIZE);
+    circle.textColor = COLOR_MISSED;
+
+    const isToday = dayDate.toDateString() === NOW.toDateString();
+
+    if (filled) {
+      circle.textColor = COLOR_FILLED;
+    } else if (isToday) {
+      circle.textColor = COLOR_TODAY;
+    } else if (dayDate < NOW.setHours(0, 0, 0, 0)) {
       circle.textColor = COLOR_MISSED;
-      
-      const isToday = dayDate.toDateString() === NOW.toDateString();
-
-      if (filled) {
-        circle.textColor = COLOR_FILLED;
-      } else if (isToday) {
-        circle.textColor = COLOR_TODAY;
-      } else if (dayDate < NOW.setHours(0, 0, 0, 0)) {
-        circle.textColor = COLOR_MISSED;
-      } else {
-        circle.textColor = COLOR_UNFILLED;
-      }
-  
-      if (dayDate < NOW && !filled) {
-        habitDates.add(key);
-      }
-
-      if (col < COLUMNS - 1) rowStack.addSpacer(CIRCLE_SPACING);
+    } else {
+      circle.textColor = COLOR_UNFILLED;
     }
+
+    if (col < COLUMNS - 1) rowStack.addSpacer(CIRCLE_SPACING);
+  }
 }
 
 widget.addSpacer(TEXT_SPACING);
