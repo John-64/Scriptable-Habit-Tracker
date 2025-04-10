@@ -24,6 +24,9 @@ const DOT_SHIFT_LEFT = 2;
 const YEAR_OFFSET = DOT_SHIFT_LEFT - 2;
 const DAYS_LEFT_OFFSET = 0;
 
+const DISPLAY_OPTIONS = ["filled/to_fill", "days left"];
+const DISPLAY_OPTION = DISPLAY_OPTIONS[0];
+
 // ======================
 // =- ADVANCED OPTIONS -=
 // ======================
@@ -168,7 +171,26 @@ const eventText = eventStack.addText(HABIT_NAME);
 eventText.font = MENLO_BOLD;
 eventText.textColor = COLOR_TODAY;
 
-const daysText = `${DAYS_UNTIL_END} days left`;
+let daysText = "";
+if (DISPLAY_OPTION === "filled/to_fill") {
+  const DAY_INDEX_TODAY = Math.floor((NOW - START_DATE) / MS_PER_DAY) + 1;
+  const DAYS_PASSED = DAY_INDEX_TODAY;
+
+  let filledCount = 0;
+  for (let i = 0; i < DAYS_PASSED; i++) {
+    const date = new Date(START_DATE.getTime() + i * MS_PER_DAY);
+    const key = formatDate(date);
+    if (habitData[key] === true) {
+      filledCount++;
+    }
+  }
+
+  daysText = `${filledCount}/${DAYS_PASSED}`;
+} else if (DISPLAY_OPTION === "days left") {
+  const DAYS_LEFT = Math.max(0, Math.round((END_DATE - NOW) / MS_PER_DAY));
+  daysText = `${DAYS_LEFT} days left`;
+}
+
 const textWidth = daysText.length * 7.5;
 const availableSpace = WIDGET_WIDTH - (PADDING * 2) - YEAR_OFFSET - (eventText.text.length * 7.5);
 const spacerLength = availableSpace - textWidth + DAYS_LEFT_OFFSET;
