@@ -2,7 +2,7 @@
 Scriptable widgets for visualizing habit tracking data as a heatmap.
 
 <p align="center">
-  <img src="Media/widget.jpg" alt="Habit Tracker Widget" width="50%"/>
+  <img src="media/widget.jpg" alt="Habit Tracker Widget" width="50%"/>
 </p>
 
 ## Setup and Installation
