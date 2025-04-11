@@ -1,4 +1,4 @@
-// Scriptable Habit Tracker - John64 (modificato)
+// Scriptable Habit Tracker - John64
 
 // ========================
 // =- USER CONFIGURATION -=
@@ -21,11 +21,12 @@ const CIRCLE_SIZE = 6;
 const CIRCLE_SPACING = 3;
 const TEXT_SPACING = 7;
 const DOT_SHIFT_LEFT = 2;
-const YEAR_OFFSET = DOT_SHIFT_LEFT - 2;
-const DAYS_LEFT_OFFSET = 0;
 
 const DISPLAY_OPTIONS = ["filled/to_fill", "days left"];
 const DISPLAY_OPTION = DISPLAY_OPTIONS[0];
+
+const FONT_REGULAR = new Font("Menlo", 12);
+const FONT_BOLD = new Font("Menlo-Bold", 12);
 
 // ======================
 // =- ADVANCED OPTIONS -=
@@ -107,16 +108,15 @@ overlay.colors = [
   new Color(BG_COLOR, BG_OVERLAY_OPACITY),
   new Color(BG_COLOR, BG_OVERLAY_OPACITY)
 ];
+
 widget.backgroundGradient = overlay;
 
 const WIDGET_WIDTH = 320;
+
 const AVAILABLE_WIDTH = WIDGET_WIDTH - (2 * PADDING);
 const TOTAL_CIRCLE_WIDTH = CIRCLE_SIZE + CIRCLE_SPACING;
 const COLUMNS = Math.floor(AVAILABLE_WIDTH / TOTAL_CIRCLE_WIDTH);
 const ROWS = Math.ceil(DAYS_TOTAL / COLUMNS);
-
-const MENLO_REGULAR = new Font("Menlo", 12);
-const MENLO_BOLD = new Font("Menlo-Bold", 12);
 
 widget.setPadding(12, PADDING, 12, PADDING);
 
@@ -166,16 +166,15 @@ const footer = widget.addStack();
 footer.layoutHorizontally();
 
 const eventStack = footer.addStack();
-eventStack.addSpacer(YEAR_OFFSET);
+eventStack.addSpacer(PADDING);
 const eventText = eventStack.addText(HABIT_NAME);
-eventText.font = MENLO_BOLD;
+eventText.font = FONT_BOLD;
 eventText.textColor = COLOR_TODAY;
 
 let daysText = "";
 if (DISPLAY_OPTION === "filled/to_fill") {
   const DAY_INDEX_TODAY = Math.floor((NOW - START_DATE) / MS_PER_DAY) + 1;
   const DAYS_PASSED = DAY_INDEX_TODAY;
-
   let filledCount = 0;
   for (let i = 0; i < DAYS_PASSED; i++) {
     const date = new Date(START_DATE.getTime() + i * MS_PER_DAY);
@@ -184,7 +183,6 @@ if (DISPLAY_OPTION === "filled/to_fill") {
       filledCount++;
     }
   }
-
   daysText = `${filledCount}/${DAYS_PASSED}`;
 } else if (DISPLAY_OPTION === "days left") {
   const DAYS_LEFT = Math.max(0, Math.round((END_DATE - NOW) / MS_PER_DAY));
@@ -192,17 +190,15 @@ if (DISPLAY_OPTION === "filled/to_fill") {
 }
 
 const textWidth = daysText.length * 7.5;
-const availableSpace = WIDGET_WIDTH - (PADDING * 2) - YEAR_OFFSET - (eventText.text.length * 7.5);
-const spacerLength = availableSpace - textWidth + DAYS_LEFT_OFFSET;
+const availableSpace = WIDGET_WIDTH - (PADDING * 2) - (eventText.text.length * 7.5);
+const spacerLength = availableSpace - textWidth - (PADDING * 4);
 
 footer.addSpacer(spacerLength);
 
 const daysTextStack = footer.addStack();
 const daysLeft = daysTextStack.addText(daysText);
-daysLeft.font = MENLO_REGULAR;
+daysLeft.font = FONT_REGULAR;
 daysLeft.textColor = COLOR_TODAY;
 
 Script.setWidget(widget);
 Script.complete();
-
-// Based on this countdown script: https://raw.githubusercontent.com/jvscholz/website/refs/heads/master/assets/countdown_widget/countdown.js
