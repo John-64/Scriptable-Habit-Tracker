@@ -11,10 +11,11 @@ const END_DATE = new Date(2025, 11, 31);
 const BG_COLOR = "#000617";
 const BG_OVERLAY_OPACITY = 0.5;
 
-const COLOR_TODAY = new Color("#ffffff");
+const TEXT_COLOR = new Color("#FFFFFF");
+const COLOR_TODAY = new Color("#FFFFFF");
 const COLOR_FILLED = new Color("#ffb135");
 const COLOR_MISSED = new Color("#002738");
-const COLOR_UNFILLED = new Color("#ffffff", 0.2);
+const COLOR_UNFILLED = new Color("#FFFFFF", 0.2);
 
 const PADDING = 3;
 const CIRCLE_SIZE = 6;
@@ -78,12 +79,6 @@ if (!config.runsInWidget) {
     if (response === 1) {
       data[today] = false;
       saveHabitData(data);
-
-      let notify = new Notification();
-      notify.title = "Habit removed";
-      notify.body = "Today’s entry has been marked as not done.";
-      notify.sound = "default";
-      await notify.schedule();
     }
   } else {
     data[today] = true;
@@ -99,7 +94,14 @@ const MS_PER_DAY = 86400000;
 
 const DAYS_TOTAL = Math.round((END_DATE - START_DATE) / MS_PER_DAY) + 1;
 const DAYS_UNTIL_END = Math.max(0, Math.round((END_DATE - NOW) / MS_PER_DAY));
+
 const habitData = loadHabitData();
+const todayKey = getTodayKey();
+
+if (!(todayKey in habitData)) {
+  habitData[todayKey] = false;
+  saveHabitData(habitData);
+}
 
 const widget = new ListWidget();
 const overlay = new LinearGradient();
@@ -169,7 +171,7 @@ const eventStack = footer.addStack();
 eventStack.addSpacer(PADDING);
 const eventText = eventStack.addText(HABIT_NAME);
 eventText.font = FONT_BOLD;
-eventText.textColor = COLOR_TODAY;
+eventText.textColor = TEXT_COLOR;
 
 let daysText = "";
 if (DISPLAY_OPTION === "filled/to_fill") {
@@ -198,7 +200,7 @@ footer.addSpacer(spacerLength);
 const daysTextStack = footer.addStack();
 const daysLeft = daysTextStack.addText(daysText);
 daysLeft.font = FONT_REGULAR;
-daysLeft.textColor = COLOR_TODAY;
+daysLeft.textColor = TEXT_COLOR;
 
 Script.setWidget(widget);
 Script.complete();
