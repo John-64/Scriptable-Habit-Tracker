@@ -1,5 +1,5 @@
 # Scriptable Habit Tracker
-Scriptable widgets for visualizing habit tracking data as a heatmap.
+A Scriptable widget for visualizing habit tracking data as a heatmap, featuring a streak counter (current/max streak) and a tracker for the total number of completed habits versus the total planned.
 
 <p align="center">
   <img src="media/widget.jpg" alt="Habit Tracker Widget" width="50%"/>
