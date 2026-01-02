@@ -1,21 +1,29 @@
 // Scriptable Habit Tracker - John64
-
 // ========================
 // =- USER CONFIGURATION -=
 // ========================
 
 const HABIT_NAME = "Read";
-const START_DATE = new Date(2025, 0, 1);
-const END_DATE = new Date(2025, 11, 31);
+const YEAR = 2026
+const FOLDER_NAME = "Habits";
+const START_DATE = new Date(YEAR, 0, 1);
+const END_DATE = new Date(YEAR, 11, 31);
 
 const BG_COLOR = "#000617";
 const BG_OVERLAY_OPACITY = 0.5;
-
 const TEXT_COLOR = new Color("#FFFFFF");
 const COLOR_TODAY = new Color("#FFFFFF");
 const COLOR_FILLED = new Color("#ffb135");
 const COLOR_MISSED = new Color("#002738");
 const COLOR_UNFILLED = new Color("#FFFFFF", 0.2);
+
+// ============================
+// =- END USER CONFIGURATION -=
+// ============================
+
+// Fonts and layout constants
+const FONT_REGULAR = new Font("Menlo", 12);
+const FONT_BOLD = new Font("Menlo-Bold", 12);
 
 const PADDING = 3;
 const CIRCLE_SIZE = 6;
@@ -23,31 +31,30 @@ const CIRCLE_SPACING = 3;
 const TEXT_SPACING = 7;
 const MARGIN_ADJUSTMENT = 12;
 
-const FONT_REGULAR = new Font("Menlo", 12);
-const FONT_BOLD = new Font("Menlo-Bold", 12);
 
-// ======================
-// =- ADVANCED OPTIONS -=
-// ======================
-
-const FILE_NAME = `${HABIT_NAME}.json`;
+const FILE_NAME = `${HABIT_NAME} ${YEAR}.json`;
 const FM = FileManager.iCloud();
-const HABITS_DIR = FM.joinPath(FM.documentsDirectory(), "Habits");
+const HABITS_DIR = FM.joinPath(FM.documentsDirectory(), FOLDER_NAME);
+
 if (!FM.fileExists(HABITS_DIR)) {
   FM.createDirectory(HABITS_DIR);
 }
+
 const FILE_PATH = FM.joinPath(HABITS_DIR, FILE_NAME);
 
+// Function to format date as DD/MM/YYYY
 function formatDate(date) {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${day}/${month}/${date.getFullYear()}`;
 }
 
+// Function to get today's date key
 function getTodayKey() {
   return formatDate(new Date());
 }
 
+// Functions to load and save habit data
 function loadHabitData() {
   if (FM.fileExists(FILE_PATH)) {
     const raw = FM.readString(FILE_PATH);
@@ -61,50 +68,45 @@ function loadHabitData() {
   return {};
 }
 
+// Function to save habit data
 function saveHabitData(data) {
   FM.writeString(FILE_PATH, JSON.stringify(data, null, 2));
 }
 
-function calculateStreak(habitData, startDate, currentDate) {
-  let streak = 0;
+// Function to calculate streaks
+function getStreak(habitData, startDate, currentDate) {
+  let currentStreak = 0;
+  let maxStreak = 0;
+  let tempStreak = 0;
+
   const today = new Date(currentDate);
   today.setHours(0, 0, 0, 0);
 
-  let checkDate = new Date(today);
-  const MS_PER_DAY = 86400000;
+  let checkDate = new Date(startDate);
+  checkDate.setHours(0, 0, 0, 0);
 
-  while (checkDate >= startDate) {
+  while (checkDate <= today) {
     const key = formatDate(checkDate);
-    if (habitData[key] === true) {
-      streak++;
-      checkDate.setDate(checkDate.getDate() - 1);
-    } else {
-      break;
-    }
-  }
-  return streak;
-}
-
-function calculateMaxStreak(habitData, startDate, endDate) {
-  let maxStreak = 0;
-  let currentStreak = 0;
-
-  const MS_PER_DAY = 86400000;
-  const totalDays = Math.round((endDate - startDate) / MS_PER_DAY);
-
-  for (let i = 0; i <= totalDays; i++) {
-    const date = new Date(startDate.getTime() + i * MS_PER_DAY);
-    const key = formatDate(date);
+    const isToday = checkDate.getTime() === today.getTime();
 
     if (habitData[key] === true) {
-      currentStreak++;
-      if (currentStreak > maxStreak) maxStreak = currentStreak;
+      tempStreak++;
+      if (tempStreak > maxStreak) maxStreak = tempStreak;
     } else {
-      currentStreak = 0;
+      if (!isToday) {
+        tempStreak = 0;
+      }
     }
+
+    checkDate.setDate(checkDate.getDate() + 1);
   }
 
-  return maxStreak;
+  currentStreak = tempStreak;
+
+  return {
+    currentStreak: currentStreak,
+    maxStreak: maxStreak
+  };
 }
 
 if (!config.runsInWidget) {
@@ -132,10 +134,6 @@ if (!config.runsInWidget) {
   Script.complete();
   return;
 }
-
-// ======================
-// =- WIDGET MODE -=
-// ======================
 
 const NOW = new Date();
 const MS_PER_DAY = 86400000;
@@ -219,8 +217,7 @@ widget.addSpacer(TEXT_SPACING);
 const footer = widget.addStack();
 footer.layoutHorizontally();
 
-const currentStreak = calculateStreak(habitData, START_DATE, NOW);
-const maxStreak = calculateMaxStreak(habitData, START_DATE, END_DATE);
+const stats = getStreak(habitData, START_DATE, NOW);
 
 const DAY_INDEX_TODAY = Math.floor((NOW - START_DATE) / MS_PER_DAY) + 1;
 const DAYS_PASSED = DAY_INDEX_TODAY;
@@ -234,13 +231,12 @@ for (let i = 0; i <= DAYS_PASSED; i++) {
 
 footer.addSpacer(MARGIN_ADJUSTMENT);
 
-const streakText = footer.addText(`${currentStreak}/${maxStreak}`);
+const streakText = footer.addText(`${stats.currentStreak}/${stats.maxStreak}`);
 streakText.font = FONT_REGULAR;
 streakText.textColor = TEXT_COLOR;
 
 footer.addSpacer();
 
-// Days filled / days passed
 const progressText = footer.addText(`${filledCount}/${DAYS_PASSED}`);
 progressText.font = FONT_REGULAR;
 progressText.textColor = TEXT_COLOR;
