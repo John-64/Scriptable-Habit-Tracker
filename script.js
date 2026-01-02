@@ -5,7 +5,7 @@
 
 const HABIT_NAME = "Read";
 const FOLDER_NAME = "Habits";
-const YEAR = 2025
+const YEAR = 2026
 
 const START_DATE = new Date(YEAR, 0, 1);
 const END_DATE = new Date(YEAR, 11, 31);
@@ -94,39 +94,52 @@ function saveHabitData(data) {
   FM.writeString(FILE_PATH, JSON.stringify(data, null, 2));
 }
 
-// Function to calculate streaks
-function getStreak(habitData, startDate, currentDate) {
-    let currentStreak = 0;
-    let maxStreak = 0;
-    let tempStreak = 0;
+// Function to calculate habit statistics
+function getHabitStats(habitData, startDate) {
+  let maxStreak = 0;
+  let currentStreak = 0;
+  let filledCount = 0;
 
-    const today = new Date(currentDate);
-    today.setHours(0, 0, 0, 0);
+  const keys = Object.keys(habitData);
+  if (keys.length === 0) {
+    return { currentStreak: 0, maxStreak: 0, filledCount: 0, daysElapsed: 0 };
+  }
 
-    let checkDate = new Date(startDate);
-    checkDate.setHours(0, 0, 0, 0);
+  const dates = keys.map(k => {
+    const p = k.split('/');
+    return new Date(p[2], p[1] - 1, p[0]).getTime();
+  });
+  
+  const lastTimestamp = Math.max(...dates);
+  const lastDateInFile = new Date(lastTimestamp);
+  
+  const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0);
 
-    while (checkDate <= today) {
+  const daysToProcess = Math.floor((lastTimestamp - start.getTime()) / 86400000) + 1;
+
+  for (let i = 0; i < daysToProcess; i++) {
+    const checkDate = new Date(start.getTime() + i * 86400000);
     const key = formatDate(checkDate);
-    const isToday = checkDate.getTime() === today.getTime();
+    const isFilled = habitData[key] === true;
 
-    if (habitData[key] === true) {
-        tempStreak++;
-        if (tempStreak > maxStreak) maxStreak = tempStreak;
+    if (isFilled) {
+      filledCount++;
+      currentStreak++;
+      if (currentStreak > maxStreak) maxStreak = currentStreak;
     } else {
-        if (!isToday) {
-        tempStreak = 0;
-        }
+      if (checkDate.getTime() !== lastTimestamp) {
+        currentStreak = 0;
+      }
     }
-    checkDate.setDate(checkDate.getDate() + 1);
-    }
+  }
 
-    currentStreak = tempStreak;
-
-    return {
+  return {
     currentStreak: currentStreak,
-    maxStreak: maxStreak
-    };
+    maxStreak: maxStreak,
+    filledCount: filledCount,
+    daysElapsed: daysToProcess
+  };
 }
 
 // Main execution
@@ -183,14 +196,7 @@ overlay.colors = [
 widget.backgroundGradient = overlay;
 
 // Stats calculation
-const stats = getStreak(HABIT_DATA, START_DATE, NOW);
-const DAY_INDEX_TODAY = Math.floor((NOW - START_DATE) / MS_PER_DAY) + 1;
-let filledCount = 0;
-for (let i = 0; i < DAY_INDEX_TODAY; i++) {
-  const date = new Date(START_DATE.getTime() + i * MS_PER_DAY);
-  const key = formatDate(date);
-  if (HABIT_DATA[key] === true) filledCount++;
-}
+const stats = getHabitStats(HABIT_DATA, START_DATE, NOW);
 
 // Calculations for the grid layout
 const TOTAL_ELEMENT_WIDTH = ELEMENT_SIZE + ELEMENT_SPACING;
@@ -222,7 +228,7 @@ rightStack.layoutHorizontally();
 rightStack.setPadding(0, 0, 0, PADDING_STATS_HEADER); 
 rightStack.addSpacer(); 
 
-const progressText = rightStack.addText(`${filledCount}/${DAY_INDEX_TODAY}`);
+const progressText = rightStack.addText(`${stats.filledCount}/${stats.daysElapsed}`);
 progressText.font = FONT_REGULAR;
 progressText.textColor = new Color(TEXT_COLOR.hex, 0.7);
 
